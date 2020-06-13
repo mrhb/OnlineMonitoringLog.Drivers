@@ -14,7 +14,6 @@ using OnlineMonitoringLog.Core.Interfaces;
 
 namespace OnlineMonitoringLog.Drivers.IEC104
 {
-
     public class IEC104Unit : Unit
     {
         Timer generationTimer;
