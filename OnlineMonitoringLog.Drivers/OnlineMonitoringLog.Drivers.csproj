@@ -48,7 +48,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core.csproj">
+    <ProjectReference Include="..\..\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core.csproj">
       <Project>{ac744c57-e4a7-40f5-a021-50afa6a1f2bf}</Project>
       <Name>OnlineMonitoringLog.Core</Name>
     </ProjectReference>

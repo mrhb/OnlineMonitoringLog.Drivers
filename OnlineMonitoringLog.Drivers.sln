@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlineMonitoringLog.Drivers", "OnlineMonitoringLog.Drivers\OnlineMonitoringLog.Drivers.csproj", "{B720CB3B-8100-43C1-8701-2AB0CC36CCB2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlineMonitoringLog.Core", "..\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core.csproj", "{AC744C57-E4A7-40F5-A021-50AFA6A1F2BF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{B720CB3B-8100-43C1-8701-2AB0CC36CCB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B720CB3B-8100-43C1-8701-2AB0CC36CCB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B720CB3B-8100-43C1-8701-2AB0CC36CCB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC744C57-E4A7-40F5-A021-50AFA6A1F2BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC744C57-E4A7-40F5-A021-50AFA6A1F2BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC744C57-E4A7-40F5-A021-50AFA6A1F2BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC744C57-E4A7-40F5-A021-50AFA6A1F2BF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
