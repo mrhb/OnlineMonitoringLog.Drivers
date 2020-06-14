@@ -40,23 +40,23 @@ namespace OnlineMonitoringLog.Drivers.IEC104
 
         {
             Console.WriteLine("Connect to Iec104Server Using lib60870.NET version " + LibraryCommon.GetLibraryVersionString());
-            Connection con = new Connection(Ip.ToString());
+            //Connection con = new Connection(Ip.ToString());
 
-            con.DebugOutput = false;
+            //con.DebugOutput = false;
 
-            con.SetASDUReceivedHandler(asduReceivedHandler, null);
-            con.SetConnectionHandler(ConnectionHandler, null);
+            //con.SetASDUReceivedHandler(asduReceivedHandler, null);
+            //con.SetConnectionHandler(ConnectionHandler, null);
 
-            try
-            {
-                con.Connect();
-                ConnectionTimer = null;
-            }
-            catch (Exception)
-            {
+            //try
+            //{
+            //    con.Connect();
+            //    ConnectionTimer = null;
+            //}
+            //catch (Exception)
+            //{
 
-                ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
-            }
+            //    ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
+            //}
 
         }
   
@@ -111,18 +111,18 @@ namespace OnlineMonitoringLog.Drivers.IEC104
         public override List<ILoggableVariable<int>> UnitVariables()
         {
             var resources = new List<ILoggableVariable<int>>() {
-               new IEC104Variable(ID,ObjAddress.InputWaterTemp,ObjAddress.InputWaterTemp.ToString(),repo),
-               //new iec104Variable(ID,ObjAddress.OutputWaterTemp, "OutputWaterTemp",repo),
-               //new iec104Variable(ID,ObjAddress.OilPress, "OilPress",repo),
-               //new iec104Variable(ID,ObjAddress.AdvanceSpark, "AdvanceSpark",repo),
-               //new iec104Variable(ID,ObjAddress.ValvePosition, "ValvePosition",repo),
-               //new iec104Variable(ID,ObjAddress.ValveFlow, "ValveFlow",repo),
-               //new iec104Variable(ID,ObjAddress.ExhaustTemp, "ExhaustTemp",repo),
-               //new iec104Variable(ID,ObjAddress.ElecPower, "ElecPower",repo),
-               //new iec104Variable(ID,ObjAddress.ElecEnergy, "ElecEnergy",repo),
-               //new iec104Variable(ID,ObjAddress.WorkTime, "WorkTime",repo),
-               //new iec104Variable(ID,ObjAddress.frequency, "frequency",repo),
-               //new iec104Variable(ID,ObjAddress.PowerFactor, "PowerFactor",repo),
+               new IEC104Variable(ID,ObjAddress.InputWaterTemp,"InputWaterTemp",repo),
+               new IEC104Variable(ID,ObjAddress.OutputWaterTemp, "OutputWaterTemp",repo),
+               new IEC104Variable(ID,ObjAddress.OilPress, "OilPress",repo),
+               new IEC104Variable(ID,ObjAddress.AdvanceSpark, "AdvanceSpark",repo),
+               new IEC104Variable(ID,ObjAddress.ValvePosition, "ValvePosition",repo),
+               new IEC104Variable(ID,ObjAddress.ValveFlow, "ValveFlow",repo),
+               new IEC104Variable(ID,ObjAddress.ExhaustTemp, "ExhaustTemp",repo),
+               new IEC104Variable(ID,ObjAddress.ElecPower, "ElecPower",repo),
+               new IEC104Variable(ID,ObjAddress.ElecEnergy, "ElecEnergy",repo),
+               new IEC104Variable(ID,ObjAddress.WorkTime, "WorkTime",repo),
+               new IEC104Variable(ID,ObjAddress.frequency, "frequency",repo),
+               new IEC104Variable(ID,ObjAddress.PowerFactor, "PowerFactor",repo),
             };
 
             return resources;
