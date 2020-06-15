@@ -31,6 +31,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="InfluxDB.Collector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\InfluxDB.Collector.1.0.0\lib\net45\InfluxDB.Collector.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="InfluxDB.LineProtocol, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\InfluxDB.LineProtocol.1.0.0\lib\net45\InfluxDB.LineProtocol.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="lib60870">
       <HintPath>..\..\..\SampleCodes\Protocols\IEC_60870\lib60870.NET-2.1.0\lib60870.NET-2.1.0\lib60870\bin\Debug\lib60870.dll</HintPath>
     </Reference>
@@ -53,6 +61,9 @@
       <Project>{ac744c57-e4a7-40f5-a021-50afa6a1f2bf}</Project>
       <Name>OnlineMonitoringLog.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

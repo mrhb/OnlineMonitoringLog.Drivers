@@ -11,55 +11,103 @@ using System.Threading;
 using System.Linq;
 using OnlineMonitoringLog.Core;
 using OnlineMonitoringLog.Core.Interfaces;
+using System.ComponentModel;
+using InfluxDB.Collector;
 
 namespace OnlineMonitoringLog.Drivers.IEC104
 {
     public class IEC104Unit : Unit
     {
-        Timer generationTimer;
         private Timer ConnectionTimer;
-        
+        private Thread t;
+
         public IEC104Unit(int unitId, IPAddress ip):base(unitId,ip)
         {
-            generationTimer = new Timer(UpdateWithRandom, null, 0, 1000);
             //ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
-            // ConnectToIec104Server(null);
+
+            t = new Thread(() => ProcessUa());
+            t.Name = "IEC104_" + unitId.ToString();
+            t.IsBackground = true;
+            t.Start();
+
+            //*******InfluxDb Init*********************
+            Metrics.Collector = new CollectorConfiguration()
+                 .Tag.With("Company", "TetaPower")
+                 .Tag.With("UnitName", unitId.ToString())
+                 .Batch.AtInterval(TimeSpan.FromSeconds(2))
+                 .WriteTo.InfluxDB("http://localhost:8086", "telegraf")
+                 // .WriteTo.InfluxDB("udp://localhost:8089", "data")
+                 .CreateCollector();
+            //***************
         }
 
-        private void UpdateWithRandom(object state)
+        private void ProcessUa()
         {
-            var rnd = new Random();
-          foreach ( var item in Variables)
+            Console.WriteLine("Connecting....in theread" + LibraryCommon.GetLibraryVersionString());
+            Connection con = new Connection("127.0.0.1", 2404);//Ip.ToString());
+
+            con.DebugOutput = false;
+
+            con.SetASDUReceivedHandler(asduReceivedHandler, null);
+            con.SetConnectionHandler(ConnectionHandler, null);
+
+            try
             {
-                item.RecievedData(rnd.Next(100), DateTime.Now);
-              
+                con.Connect();
+                ConnectionTimer = null;
+            }
+            catch (Exception C)
+            {
+                Console.WriteLine(C.Message);
+                ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
             }
         }
 
+        private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            Console.WriteLine("Connecting....in BackgroundWorker" + LibraryCommon.GetLibraryVersionString());
+            Connection con = new Connection("127.0.0.1", 2404);//Ip.ToString());
+
+            con.DebugOutput = false;
+
+            con.SetASDUReceivedHandler(asduReceivedHandler, null);
+            con.SetConnectionHandler(ConnectionHandler, null);
+
+            try
+            {
+                con.Connect();
+                ConnectionTimer = null;
+            }
+            catch (Exception C)
+            {
+                Console.WriteLine(C.Message);
+                ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
+            }
+
+        }
         private void ConnectToIec104Server(object state)
 
         {
             Console.WriteLine("Connect to Iec104Server Using lib60870.NET version " + LibraryCommon.GetLibraryVersionString());
-            //Connection con = new Connection(Ip.ToString());
+            Connection con = new Connection("127.0.0.1", 2404);//Ip.ToString());
 
-            //con.DebugOutput = false;
+            con.DebugOutput = false;
 
-            //con.SetASDUReceivedHandler(asduReceivedHandler, null);
-            //con.SetConnectionHandler(ConnectionHandler, null);
+            con.SetASDUReceivedHandler(asduReceivedHandler, null);
+            con.SetConnectionHandler(ConnectionHandler, null);
 
-            //try
-            //{
-            //    con.Connect();
-            //    ConnectionTimer = null;
-            //}
-            //catch (Exception)
-            //{
+            try
+            {
+                con.Connect();
+                ConnectionTimer = null;
+            }
+            catch (Exception C )
+            {
+                Console.WriteLine(C.Message);
+                ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
+            }
 
-            //    ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
-            //}
-
-        }
-  
+        }  
         
         public override string ToString() { return "IEC104: " + Ip.ToString(); }
        
@@ -99,6 +147,16 @@ namespace OnlineMonitoringLog.Drivers.IEC104
                     var val = (MeasuredValueShortWithCP56Time2a)asdu.GetElement(i);
                     var item = Variables.Where(p => ((IEC104Variable)p).ObjectAddress == val.ObjectAddress).First();
                     item.RecievedData((int)val.Value, DateTime.Now);
+
+
+                    Metrics.Increment("mrhb_iterations");
+                    var datas = new Dictionary<string, object>
+                    {
+                         {item.name.ToString()+"_"+ID.ToString(), (int)val.Value}
+                    };
+                    Metrics.Write("UIWPF", datas);
+
+
                 }
             }
             else
