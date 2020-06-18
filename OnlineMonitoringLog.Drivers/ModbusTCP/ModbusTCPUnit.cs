@@ -27,7 +27,7 @@ namespace OnlineMonitoringLog.Drivers.IEC104
             //ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
 
             t = new Thread(() => ProcessUa());
-            t.Name = "IEC104_" + unitId.ToString();
+            t.Name = "ModbusTCP" + unitId.ToString();
             t.IsBackground = true;
             t.Start();
 
@@ -48,7 +48,7 @@ namespace OnlineMonitoringLog.Drivers.IEC104
             {
                 try
                 {
-                    ModbusClient modbusClient = new ModbusClient("127.0.0.1", 502);    //Ip-Address and Port of Modbus-TCP-Server
+                    ModbusClient modbusClient = new ModbusClient("192.168.1.110", 502);    //Ip-Address and Port of Modbus-TCP-Server
                     modbusClient.Connect();                                                    //Connect to Server
                     modbusClient.WriteMultipleCoils(4, new bool[] { true, true, true, true, true, true, true, true, true, true });    //Write Coils starting with Address 5
                                                                                                                                       //bool[] readCoils = modbusClient.ReadCoils(9, 10);                        //Read 10 Coils from Server, starting with address 10
@@ -63,11 +63,11 @@ namespace OnlineMonitoringLog.Drivers.IEC104
                             Console.WriteLine("Value of HoldingRegister " + (i + 1) + " " + readHoldingRegisters[i].ToString());
                             int val = readHoldingRegisters[i];
                             var item = Variables.Where(p => ((ModbusTCPVariable)p).ObjectAddress == i).First();
-                            item.RecievedData(val, DateTime.Now);
-
-
-                            Metrics.Increment("mrhb_iterations");
-                            datas.Add(item.name.ToString() + "_" + ID.ToString(), val);
+                            if (item.RecievedData(val, DateTime.Now))
+                            {
+                                Metrics.Increment("mrhb_iterations");
+                                datas.Add(item.name.ToString() + "_" + ID.ToString(), val);
+                            }
                         }
                         Metrics.Write("UIWPF", datas);
 
