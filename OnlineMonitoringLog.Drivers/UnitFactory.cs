@@ -2,6 +2,7 @@
 using OnlineMonitoringLog.Core.DataRepository.Entities;
 using OnlineMonitoringLog.Core.Interfaces;
 using OnlineMonitoringLog.Drivers.IEC104;
+using OnlineMonitoringLog.Drivers.ModbusTCP;
 using System;
 using System.Collections.Generic;
 using System.Linq;

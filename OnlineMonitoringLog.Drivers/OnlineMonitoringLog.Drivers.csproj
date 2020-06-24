@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>OnlineMonitoringLog.Drivers</RootNamespace>
     <AssemblyName>OnlineMonitoringLog.Drivers</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -33,9 +33,6 @@
   <ItemGroup>
     <Reference Include="CoAP">
       <HintPath>..\..\..\SampleCodes\Protocols\CoAP\CoAP.NET\CoAP.NET\bin\Debug\CoAP.dll</HintPath>
-    </Reference>
-    <Reference Include="EasyModbus">
-      <HintPath>..\..\OnlineMonitoringLog.Core\packages\EasyModbus.dll</HintPath>
     </Reference>
     <Reference Include="InfluxDB.Collector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\InfluxDB.Collector.1.0.0\lib\net45\InfluxDB.Collector.dll</HintPath>
@@ -69,6 +66,10 @@
     <Compile Include="UnitFactory.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\EasyModbus\EasyModbusTCPCore\EasyModbusTCPCore.csproj">
+      <Project>{90dd611f-fc29-4a6b-ab26-5253b97eaa08}</Project>
+      <Name>EasyModbusTCPCore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core\OnlineMonitoringLog.Core.csproj">
       <Project>{ac744c57-e4a7-40f5-a021-50afa6a1f2bf}</Project>
       <Name>OnlineMonitoringLog.Core</Name>

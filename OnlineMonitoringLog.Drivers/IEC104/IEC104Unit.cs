@@ -13,6 +13,7 @@ using OnlineMonitoringLog.Core;
 using OnlineMonitoringLog.Core.Interfaces;
 using System.ComponentModel;
 using InfluxDB.Collector;
+using OnlineMonitoringLog.Drivers.Types;
 
 namespace OnlineMonitoringLog.Drivers.IEC104
 {
