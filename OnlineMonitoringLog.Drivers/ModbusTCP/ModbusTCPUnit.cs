@@ -23,16 +23,37 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
     public class ModbusTCPUnit : Unit
     {
         private Timer ConnectionTimer;
-        private Thread t;
+        static Thread ConnectionThread;
+        private Thread ReadDataThread;
+        static List<ModbusTCPUnit> obj = new List<ModbusTCPUnit>();
+        private ModbusClient _modbusClient;
+        public ModbusClient modbusClient
+        {
+            get { return _modbusClient; }
+            set
+            {
+                _modbusClient = value;
+            }
+        }
+        static ModbusTCPUnit()
+        {
+            ConnectionThread = new Thread(() => StartListening());
+            ConnectionThread.Name = "ModbusTCP" ;
+            ConnectionThread.IsBackground = true;
+         
+        }
 
         public ModbusTCPUnit(int unitId, IPAddress ip):base(unitId,ip)
         {
-            //ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
+            if (ConnectionThread.ThreadState != ThreadState.Running)
+                try { ConnectionThread.Start(); } catch { }
 
-            t = new Thread(() => StartListening());
-            t.Name = "ModbusTCP" + unitId.ToString();
-            t.IsBackground = true;
-            t.Start();
+            obj.Add(this);
+
+            ReadDataThread = new Thread(() => ProcessUa());
+            ReadDataThread.Name = "ModbusTCPReadData"+unitId.ToString();
+            ReadDataThread.IsBackground = true;
+            ReadDataThread.Start();
 
             //*******InfluxDb Init*********************
             Metrics.Collector = new CollectorConfiguration()
@@ -68,21 +89,23 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
         {
             while (true)
             {
+                //if (modbusClient == null) { Thread.Sleep(2000); break; }
                 try
                 {
-                    ModbusClient modbusClient = new ModbusClient("192.168.1.110", 502);    //Ip-Address and Port of Modbus-TCP-Server
-                    modbusClient.Connect();                                                    //Connect to Server
-                    modbusClient.WriteMultipleCoils(4, new bool[] { true, true, true, true, true, true, true, true, true, true });    //Write Coils starting with Address 5
-                                                                                                                                      //bool[] readCoils = modbusClient.ReadCoils(9, 10);                        //Read 10 Coils from Server, starting with address 10
+                    //ModbusClient modbusClient = new ModbusClient("192.168.1.110", 502);    //Ip-Address and Port of Modbus-TCP-Server
+                    //modbusClient.Connect();                                                    //Connect to Server
+                    //modbusClient.WriteMultipleCoils(4, new bool[] { true, true, true, true, true, true, true, true, true, true });    //Write Coils starting with Address 5
+                    //                                                                                                                  //bool[] readCoils = modbusClient.ReadCoils(9, 10);                        //Read 10 Coils from Server, starting with address 10
                     while (true)
                     {
+
                         int[] readHoldingRegisters = modbusClient.ReadHoldingRegisters(0, 12);    //Read 10 Holding Registers from Server, starting with Address 1
                         var datas = new Dictionary<string, object>();
                         // Console Output
 
                         for (int i = 1; i < readHoldingRegisters.Length; i++)
                         {
-                            Console.WriteLine("Value of HoldingRegister " + (i + 1) + " " + readHoldingRegisters[i].ToString());
+                            Console.WriteLine($"Id:{modbusClient.UnitIdentifier}   Value of HoldingRegister " + (i + 1) + " " + readHoldingRegisters[i].ToString());
                             int val = readHoldingRegisters[i];
                             var item = Variables.Where(p => ((ModbusTCPVariable)p).ObjectAddress == i).First();
                             if (item.RecievedData(val, DateTime.Now))
@@ -92,90 +115,26 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
                             }
                         }
                         Metrics.Write("UIWPF", datas);
-
                         Thread.Sleep(1000);
                     }
                 }
                 catch (Exception c)
                 {
-                    Console.Write($"Error Occured in {t.Name}: {c.ToString()}");
+                    Console.WriteLine($"Error Occured in \"ProcessUa\" at {ReadDataThread.Name}");
                 }
+
+                Thread.Sleep(2000);
             }
-           
-           
+
+
         }
 
-       private void ConnectToIec104Server(object state)
 
-        {
-            Console.WriteLine("Connect to Iec104Server Using lib60870.NET version " + LibraryCommon.GetLibraryVersionString());
-            Connection con = new Connection("127.0.0.1", 2404);//Ip.ToString());
-
-            con.DebugOutput = false;
-
-            con.SetASDUReceivedHandler(asduReceivedHandler, null);
-            con.SetConnectionHandler(ConnectionHandler, null);
-
-            try
-            {
-                con.Connect();
-                ConnectionTimer = null;
-            }
-            catch (Exception C )
-            {
-                Console.WriteLine(C.Message);
-                ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
-            }
-
-        }  
-        
         public override string ToString() { return "ModbusTCP: " + Ip.ToString(); }
-       
-
-        private void ConnectionHandler(object parameter, ConnectionEvent connectionEvent)
-        {
-            switch (connectionEvent)
-            {
-                case ConnectionEvent.OPENED:
-                    Console.WriteLine("Connected");
-                    ConnectionTimer = null;
-                    break;
-                case ConnectionEvent.CLOSED:
-                    Console.WriteLine("Connection closed");
-                    ConnectionTimer = new Timer(ConnectToIec104Server, null, 0, 5000);
-                    break;
-                case ConnectionEvent.STARTDT_CON_RECEIVED:
-                    Console.WriteLine("STARTDT CON received");
-
-                    break;
-                case ConnectionEvent.STOPDT_CON_RECEIVED:
-                    Console.WriteLine("STOPDT CON received");
-                    break;
-            }
-        }
-
-        private bool asduReceivedHandler(object parameter, ASDU asdu)
-        {
-            Console.WriteLine(asdu.ToString());
-
-            if (asdu.TypeId == TypeID.M_ME_TF_1)
-            {
-
-                
-            }
-            else
-            {
-                Console.WriteLine("Unknown message type!");
-            }
-           return true;
-        }
-
-
+             
         public static ManualResetEvent allDone = new ManualResetEvent(false);
-
-
-
-        public  void StartListening()
+        
+        public static void StartListening()
         {
             // Establish the local endpoint for the socket.  
             // The DNS name of the computer  
@@ -204,41 +163,10 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
                     listener.BeginAccept(
                         new AsyncCallback(AcceptCallback),
                         listener);
-            
-                    try
-                    {
 
-                        while (true)
-                        {
-                            int[] serverResponse = modbusClient.ReadHoldingRegisters(1, 10);
-
-                            int[] readHoldingRegisters = modbusClient.ReadHoldingRegisters(0, 12);    //Read 10 Holding Registers from Server, starting with Address 1
-                            var datas = new Dictionary<string, object>();
-                            // Console Output
-
-                            for (int i = 1; i < readHoldingRegisters.Length; i++)
-                            {
-                                Console.WriteLine("Value of HoldingRegister " + (i + 1) + " " + readHoldingRegisters[i].ToString());
-                                int val = readHoldingRegisters[i];
-                                var item = Variables.Where(p => ((ModbusTCPVariable)p).ObjectAddress == i).First();
-                                if (item.RecievedData(val, DateTime.Now))
-                                {
-                                    Metrics.Increment("mrhb_iterations");
-                                    datas.Add(item.name.ToString() + "_" + ID.ToString(), val);
-                                }
-                            }
-                            Metrics.Write("UIWPF", datas);
-
-                            Thread.Sleep(1000);
-                        }
-                    }
-                    catch {
-
-                        // Wait until a connection is made before continuing.  
-                        allDone.WaitOne();
-                    }
-
-                  
+                    // Wait until a connection is made before continuing.  
+                    Thread.Sleep(5000);
+                    allDone.WaitOne();
                 }
 
             }
@@ -251,7 +179,7 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
             Console.Read();
 
         }
-
+        static int unitnum=0;
         public static void AcceptCallback(IAsyncResult ar)
         {
             // Signal the main thread to continue.  
@@ -263,105 +191,46 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
 
             Console.WriteLine($"socket conncetion to {handler.RemoteEndPoint} has established");
             // Create the state object.  
-            StateObject state = new StateObject();
-            state.workSocket = handler;
 
-            for (int j = 1; j == 1; j++)
-            {
-                modbusClient = new ModbusClient(handler);
-                // modbus.UnitIdentifier = Convert.ToByte(j);
-                int[] serverResponse = modbusClient.ReadHoldingRegisters(1, 10);
 
-                for (int i = 0; i < serverResponse.Length; i++)
-                {
-                    Console.WriteLine($"data from {handler.RemoteEndPoint} recieved: {serverResponse[i]} ");
-                }
+            var modbusClient = new ModbusClient(handler);
 
-                Thread.Sleep(500);
-                //    modbus.ReadHoldingRegisters(1, 10);
-                try
-                {
-                }
-                catch
-                { Console.WriteLine("time out in  stream.Read"); }
+            modbusClient.UnitIdentifier = Convert.ToByte(0);
+            int unitId = modbusClient.ReportSlaveID();
+            Console.WriteLine($"{handler.RemoteEndPoint} has UnitId:  " + unitId.ToString());
 
-            }
-
-        }
-
-        public static void ReadCallback(IAsyncResult ar)
-        {
-            String content = String.Empty;
-
-            // Retrieve the state object and the handler socket  
-            // from the asynchronous state object.  
-            StateObject state = (StateObject)ar.AsyncState;
-            Socket handler = state.workSocket;
-
-            // Read data from the client socket.
-            int bytesRead = handler.EndReceive(ar);
-
-            if (bytesRead > 0)
-            {
-                // There  might be more data, so store the data received so far.  
-                state.sb.Append(Encoding.ASCII.GetString(
-                    state.buffer, 0, bytesRead));
-
-                // Check for end-of-file tag. If it is not there, read
-                // more data.  
-                content = state.sb.ToString();
-                if (content.IndexOf("<EOF>") > -1)
-                {
-                    // All the data has been read from the
-                    // client. Display it on the console.  
-                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                        content.Length, content);
-                    // Echo the data back to the client.  
-                    Send(handler, content);
-                }
-                else
-                {
-                    // Not all data received. Get more.  
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReadCallback), state);
-                }
-            }
-        }
-
-        private static void Send(Socket handler, String data)
-        {
-            // Convert the string data to byte data using ASCII encoding.  
-            byte[] byteData = Encoding.ASCII.GetBytes(data);
-
-            // Begin sending the data to the remote device.  
-            handler.BeginSend(byteData, 0, byteData.Length, 0,
-                new AsyncCallback(SendCallback), handler);
-        }
-
-        private static void SendCallback(IAsyncResult ar)
-        {
             try
             {
-                // Retrieve the socket from the state object.  
-                Socket handler = (Socket)ar.AsyncState;
+                obj.Where(a => a.ID == unitId).First().modbusClient = modbusClient;
+                //for (int j = 1; j == 1; j++)
+                //{
 
-                // Complete sending the data to the remote device.  
-                int bytesSent = handler.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
+                //        obj[unitnum].modbusClient = modbusClient; unitnum++;
+                //        // modbus.UnitIdentifier = Convert.ToByte(j);
+                //    //    int[] serverResponse = modbusClient.ReadHoldingRegisters(1, 10);
+
+
+                //    //for (int i = 0; i < serverResponse.Length; i++)
+                //    //{
+                //    //    Console.WriteLine($"data from {handler.RemoteEndPoint} recieved: {serverResponse[i]} ");
+                //    //}
+
+                //    Thread.Sleep(500);
+
+                //}
+
+                //    modbus.ReadHoldingRegisters(1, 10);
 
             }
-            catch (Exception e)
+            catch
             {
-                Console.WriteLine(e.ToString());
+                handler.Close();
+                //unitnum--;
+                Console.WriteLine("AcceptCallback Error");
             }
+
         }
-
-
-        static ModbusClient modbusClient;
-
 
     }
     public class StateObject
