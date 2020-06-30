@@ -4,14 +4,10 @@ using System;
 using System.Collections.Generic;
 
 using System.Net;
-using lib60870;
-using lib60870.CS101;
-using lib60870.CS104;
 using System.Threading;
 using System.Linq;
 using OnlineMonitoringLog.Core;
 using OnlineMonitoringLog.Core.Interfaces;
-using System.ComponentModel;
 using InfluxDB.Collector;
 using EasyModbus;
 using System.Net.Sockets;
@@ -22,7 +18,6 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
 {
     public class ModbusTCPUnit : Unit
     {
-        private Timer ConnectionTimer;
         static Thread ConnectionThread;
         private Thread ReadDataThread;
         static List<ModbusTCPUnit> obj = new List<ModbusTCPUnit>();
@@ -57,11 +52,8 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
 
             //*******InfluxDb Init*********************
             Metrics.Collector = new CollectorConfiguration()
-                 .Tag.With("Company", "TetaPower")
-                 .Tag.With("UnitName", unitId.ToString())
-                 .Batch.AtInterval(TimeSpan.FromSeconds(2))
-                 .WriteTo.InfluxDB("http://localhost:8086", "telegraf")
-                 // .WriteTo.InfluxDB("udp://localhost:8089", "data")
+                 .Batch.AtInterval(TimeSpan.FromSeconds(5))
+                 .WriteTo.InfluxDB("http://localhost:8086", "OnlineMonitoringDb")
                  .CreateCollector();
             //***************
         }
@@ -89,32 +81,34 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
         {
             while (true)
             {
-                //if (modbusClient == null) { Thread.Sleep(2000); break; }
-                try
+              try
                 {
-                    //ModbusClient modbusClient = new ModbusClient("192.168.1.110", 502);    //Ip-Address and Port of Modbus-TCP-Server
-                    //modbusClient.Connect();                                                    //Connect to Server
-                    //modbusClient.WriteMultipleCoils(4, new bool[] { true, true, true, true, true, true, true, true, true, true });    //Write Coils starting with Address 5
-                    //                                                                                                                  //bool[] readCoils = modbusClient.ReadCoils(9, 10);                        //Read 10 Coils from Server, starting with address 10
                     while (true)
                     {
 
                         int[] readHoldingRegisters = modbusClient.ReadHoldingRegisters(0, 12);    //Read 10 Holding Registers from Server, starting with Address 1
                         var datas = new Dictionary<string, object>();
                         // Console Output
-
+                        var randGen = new Random();
                         for (int i = 1; i < readHoldingRegisters.Length; i++)
                         {
                             Console.WriteLine($"Id:{modbusClient.UnitIdentifier}   Value of HoldingRegister " + (i + 1) + " " + readHoldingRegisters[i].ToString());
-                            int val = readHoldingRegisters[i];
+
+                            int val = readHoldingRegisters[i]+ randGen.Next(500);
                             var item = Variables.Where(p => ((ModbusTCPVariable)p).ObjectAddress == i).First();
                             if (item.RecievedData(val, DateTime.Now))
                             {
-                                Metrics.Increment("mrhb_iterations");
-                                datas.Add(item.name.ToString() + "_" + ID.ToString(), val);
+                            
+                                datas.Add(item.name.ToString(), val);
                             }
                         }
-                        Metrics.Write("UIWPF", datas);
+                        //*******InfluxDb ********
+                        var tags = new Dictionary<string, string>() {
+                            { "UnitName", ID.ToString() },
+                            { "Company", "TetaPower" }
+                        };
+                        Metrics.Write("ModbusLogger", datas, tags);
+
                         Thread.Sleep(1000);
                     }
                 }
@@ -125,10 +119,7 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
 
                 Thread.Sleep(2000);
             }
-
-
         }
-
 
         public override string ToString() { return "ModbusTCP: " + Ip.ToString(); }
              
@@ -179,7 +170,7 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
             Console.Read();
 
         }
-        static int unitnum=0;
+
         public static void AcceptCallback(IAsyncResult ar)
         {
             // Signal the main thread to continue.  
@@ -202,49 +193,15 @@ namespace OnlineMonitoringLog.Drivers.ModbusTCP
             try
             {
                 obj.Where(a => a.ID == unitId).First().modbusClient = modbusClient;
-                //for (int j = 1; j == 1; j++)
-                //{
-
-
-                //        obj[unitnum].modbusClient = modbusClient; unitnum++;
-                //        // modbus.UnitIdentifier = Convert.ToByte(j);
-                //    //    int[] serverResponse = modbusClient.ReadHoldingRegisters(1, 10);
-
-
-                //    //for (int i = 0; i < serverResponse.Length; i++)
-                //    //{
-                //    //    Console.WriteLine($"data from {handler.RemoteEndPoint} recieved: {serverResponse[i]} ");
-                //    //}
-
-                //    Thread.Sleep(500);
-
-                //}
-
-                //    modbus.ReadHoldingRegisters(1, 10);
-
             }
             catch
             {
                 handler.Close();
-                //unitnum--;
-                Console.WriteLine("AcceptCallback Error");
+                Console.WriteLine("AcceptCallback Error in  Recieved UnitId: " + unitId.ToString());
             }
 
         }
 
     }
-    public class StateObject
-    {
-        // Client  socket.  
-        public Socket workSocket = null;
-        // Size of receive buffer.  
-        public const int BufferSize = 1024;
-        // Receive buffer.  
-        public byte[] buffer = new byte[BufferSize];
-        // Received data string.  
-        public StringBuilder sb = new StringBuilder();
-    }
-
-
 }
 
